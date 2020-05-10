@@ -75,15 +75,41 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 
 }
 
+void proximity(std::vector<std::pair<std::vector<float>, bool>>& pointsProc, int index, std::vector<int>& cluster, KdTree* tree, float distanceTol)
+{
+	pointsProc[index].second = true;
+	cluster.push_back(index);
+	std::vector<int> nearby = tree->search(pointsProc[index].first, distanceTol);
+	for (auto nIt = nearby.begin(); nIt != nearby.end(); ++nIt)
+	{
+		if (!pointsProc[*nIt].second)
+			proximity(pointsProc, *nIt, cluster, tree, distanceTol);
+	}
+}
+
 std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
 {
 
 	// TODO: Fill out this function to return list of indices for each cluster
 
 	std::vector<std::vector<int>> clusters;
+
+	std::vector<std::pair<std::vector<float>, bool>> pointsProc;
+	for (auto point : points)
+		pointsProc.push_back(std::make_pair(point, false));
+
+	for (int i = 0; i < points.size(); ++i)
+	{
+		//if (!pointsProc[i])
+		if (!pointsProc[i].second)
+		{
+			std::vector<int> newCluster;
+			proximity(pointsProc, i, newCluster, tree, distanceTol);
+			clusters.push_back(newCluster);
+		}
+	}
  
 	return clusters;
-
 }
 
 int main ()
@@ -139,7 +165,7 @@ int main ()
   		++clusterId;
   	}
   	if(clusters.size()==0)
-  		renderPointCloud(viewer,cloud,"data");
+  		renderPointCloud(viewer,cloud,"data",Color(0,0,1));
 	
   	while (!viewer->wasStopped ())
   	{
